@@ -1,6 +1,8 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once 'config/db.php';
+require_once 'includes/auth.php';
+require_admin();
 
 $idsRaw = $_POST['ids'] ?? '';
 $ids = array_filter(array_map('intval', explode(',', $idsRaw)), fn($v) => $v > 0);

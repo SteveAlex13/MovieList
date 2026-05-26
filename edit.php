@@ -1,6 +1,8 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once 'config/db.php';
+require_once 'includes/auth.php';
+require_admin();
 
 $id = intval($_GET['id'] ?? 0);
 if (!$id) {

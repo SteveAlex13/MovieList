@@ -1,6 +1,8 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once 'config/db.php';
+require_once 'includes/auth.php';
+require_admin();
 
 // Pagination
 $perPage = 10;
@@ -86,248 +88,21 @@ function qs($extra = []) {
     <title>Admin Dashboard — CineList</title>
     <link rel="stylesheet" href="assets/style.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
-    <style>
-    /* ── Admin-specific styles ── */
-    .admin-layout { display: flex; min-height: calc(100vh - 64px); }
-
-    .admin-sidebar {
-        width: 220px;
-        flex-shrink: 0;
-        background: var(--bg-card);
-        border-right: 1px solid var(--border);
-        padding: 1.5rem 0;
-        position: sticky;
-        top: 64px;
-        height: calc(100vh - 64px);
-        overflow-y: auto;
-    }
-    .sidebar-section { padding: 0 1rem; margin-bottom: 1.5rem; }
-    .sidebar-label {
-        font-size: 0.68rem;
-        font-weight: 700;
-        letter-spacing: 0.12em;
-        color: var(--text-secondary);
-        text-transform: uppercase;
-        padding: 0 0.5rem;
-        margin-bottom: 0.5rem;
-    }
-    .sidebar-link {
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        padding: 0.6rem 0.75rem;
-        border-radius: var(--radius-sm);
-        text-decoration: none;
-        font-size: 0.88rem;
-        color: var(--text-secondary);
-        transition: var(--transition);
-        font-weight: 500;
-    }
-    .sidebar-link:hover { background: var(--bg-card2); color: var(--text-primary); }
-    .sidebar-link.active { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--border-hover); }
-    .sidebar-link .icon { font-size: 1rem; width: 20px; text-align: center; }
-
-    .admin-content { flex: 1; padding: 2rem; overflow-x: auto; min-width: 0; }
-
-    /* Stats cards */
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-        gap: 1rem;
-        margin-bottom: 2rem;
-    }
-    .stat-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        padding: 1.25rem 1.5rem;
-        transition: var(--transition);
-    }
-    .stat-card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
-    .stat-icon { font-size: 1.6rem; margin-bottom: 0.5rem; }
-    .stat-value {
-        font-family: 'Playfair Display', serif;
-        font-size: 2rem;
-        font-weight: 900;
-        color: var(--text-primary);
-        line-height: 1;
-        margin-bottom: 0.25rem;
-    }
-    .stat-label { font-size: 0.78rem; color: var(--text-secondary); font-weight: 500; }
-
-    /* Admin toolbar */
-    .admin-toolbar {
-        display: flex;
-        gap: 0.75rem;
-        align-items: center;
-        flex-wrap: wrap;
-        margin-bottom: 1.25rem;
-    }
-    .admin-toolbar .search-input-wrap { flex: 1; min-width: 180px; }
-
-    /* Table */
-    .table-wrap {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        overflow: hidden;
-    }
-    .data-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.875rem;
-    }
-    .data-table thead { background: var(--bg-card2); }
-    .data-table th {
-        padding: 0.85rem 1rem;
-        text-align: left;
-        font-size: 0.72rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: var(--text-secondary);
-        border-bottom: 1px solid var(--border);
-        white-space: nowrap;
-    }
-    .data-table th a {
-        color: inherit;
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        gap: 0.3rem;
-    }
-    .data-table th a:hover { color: var(--accent); }
-    .data-table td {
-        padding: 0.85rem 1rem;
-        border-bottom: 1px solid var(--border);
-        color: var(--text-primary);
-        vertical-align: middle;
-    }
-    .data-table tbody tr:last-child td { border-bottom: none; }
-    .data-table tbody tr { transition: var(--transition); }
-    .data-table tbody tr:hover { background: var(--bg-card2); }
-
-    .td-poster img {
-        width: 36px;
-        height: 52px;
-        object-fit: cover;
-        border-radius: 4px;
-        border: 1px solid var(--border);
-    }
-    .td-poster .no-img {
-        width: 36px;
-        height: 52px;
-        background: var(--bg-input);
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.2rem;
-        border: 1px solid var(--border);
-    }
-    .td-title { font-weight: 600; max-width: 220px; }
-    .td-title small { display: block; color: var(--text-secondary); font-weight: 400; font-size: 0.78rem; margin-top: 2px; }
-    .td-synopsis {
-        max-width: 200px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        color: var(--text-secondary);
-        font-size: 0.8rem;
-    }
-    .td-rating { font-weight: 700; color: var(--accent); }
-    .genre-chip {
-        display: inline-block;
-        padding: 0.2rem 0.6rem;
-        background: var(--accent-dim);
-        color: var(--accent);
-        border: 1px solid var(--border-hover);
-        border-radius: 50px;
-        font-size: 0.72rem;
-        font-weight: 600;
-        white-space: nowrap;
-    }
-    .td-actions { display: flex; gap: 0.4rem; white-space: nowrap; }
-    .tbl-btn {
-        padding: 0.35rem 0.7rem;
-        border-radius: 6px;
-        font-size: 0.78rem;
-        font-weight: 600;
-        cursor: pointer;
-        border: 1px solid transparent;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-        transition: var(--transition);
-        font-family: inherit;
-    }
-    .tbl-btn-edit { background: var(--bg-card2); color: var(--text-secondary); border-color: var(--border); }
-    .tbl-btn-edit:hover { background: var(--accent-dim); color: var(--accent); border-color: var(--border-hover); }
-    .tbl-btn-del { background: var(--red-dim); color: var(--red); border-color: rgba(255,71,87,0.3); }
-    .tbl-btn-del:hover { background: var(--red); color: #fff; }
-
-    /* Pagination */
-    .pagination {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 1rem 1.25rem;
-        border-top: 1px solid var(--border);
-        flex-wrap: wrap;
-        gap: 0.75rem;
-    }
-    .pagination-info { font-size: 0.83rem; color: var(--text-secondary); }
-    .pagination-links { display: flex; gap: 0.3rem; }
-    .page-btn {
-        padding: 0.4rem 0.75rem;
-        border-radius: 6px;
-        font-size: 0.82rem;
-        font-weight: 600;
-        text-decoration: none;
-        color: var(--text-secondary);
-        border: 1px solid var(--border);
-        background: var(--bg-card2);
-        transition: var(--transition);
-        display: inline-flex;
-        align-items: center;
-    }
-    .page-btn:hover { color: var(--accent); border-color: var(--border-hover); }
-    .page-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
-    .page-btn.disabled { opacity: 0.35; pointer-events: none; }
-
-    /* Bulk delete checkbox */
-    .cb-movie { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
-    .bulk-bar {
-        display: none;
-        align-items: center;
-        gap: 1rem;
-        padding: 0.75rem 1rem;
-        background: var(--accent-dim);
-        border: 1px solid var(--border-hover);
-        border-radius: var(--radius-sm);
-        margin-bottom: 1rem;
-        font-size: 0.875rem;
-    }
-    .bulk-bar.visible { display: flex; }
-
-    @media (max-width: 900px) {
-        .admin-sidebar { display: none; }
-        .admin-content { padding: 1rem; }
-        .data-table th:nth-child(5),
-        .data-table td:nth-child(5),
-        .data-table th:nth-child(6),
-        .data-table td:nth-child(6) { display: none; }
-    }
-    </style>
 </head>
-<body>
-
-<?php include 'includes/navbar.php'; ?>
+<body class="app-body">
 
 <div class="admin-layout">
     <!-- Sidebar -->
     <aside class="admin-sidebar">
+        <a href="admin.php" class="sidebar-brand">
+            <span class="brand-icon">🎬</span>
+            <span class="brand-text">CineList</span>
+            <span class="brand-badge">Admin</span>
+        </a>
+        <div class="sidebar-user">
+            👤 <?= htmlspecialchars($_SESSION['username']) ?>
+        </div>
+        <nav class="sidebar-nav">
         <div class="sidebar-section">
             <div class="sidebar-label">Menu</div>
             <a href="admin.php" class="sidebar-link active">
@@ -337,7 +112,7 @@ function qs($extra = []) {
                 <span class="icon">➕</span> Tambah Film
             </a>
             <a href="index.php" class="sidebar-link">
-                <span class="icon">🎬</span> Lihat Publik
+                <span class="icon">🏠</span> Halaman Utama
             </a>
         </div>
         <div class="sidebar-section">
@@ -350,6 +125,12 @@ function qs($extra = []) {
                 <span class="icon">🎭</span> <?= htmlspecialchars($g) ?>
             </a>
             <?php endforeach; ?>
+        </div>
+        </nav>
+        <div style="padding:1rem;border-top:1px solid var(--border);margin-top:auto;">
+            <a href="logout.php" class="sidebar-link" style="color:var(--red,#ff4757);">
+                <span class="icon">🚪</span> Logout
+            </a>
         </div>
     </aside>
 
@@ -530,8 +311,6 @@ function qs($extra = []) {
 
     </div><!-- /admin-content -->
 </div><!-- /admin-layout -->
-
-<?php include 'includes/footer.php'; ?>
 
 <!-- Delete Modal -->
 <div class="modal-overlay" id="deleteModal">

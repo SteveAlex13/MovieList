@@ -1,6 +1,8 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once 'config/db.php';
+require_once 'includes/auth.php';
+require_admin();
 
 $id = intval($_GET['id'] ?? 0);
 
@@ -46,6 +48,7 @@ try {
     $_SESSION['error'] = 'Gagal menghapus film: ' . $e->getMessage();
 }
 
-header('Location: index.php');
+$back = isset($_SERVER['HTTP_REFERER']) && str_contains($_SERVER['HTTP_REFERER'], 'index.php') ? 'index.php' : 'admin.php';
+header('Location: ' . $back);
 exit;
 ?>
