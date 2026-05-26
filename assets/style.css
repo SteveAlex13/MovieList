@@ -679,3 +679,104 @@ textarea.form-control { resize: vertical; min-height: 80px; }
 @media (max-width: 480px) {
     .movies-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ── SYNOPSIS OVERLAY ────────────────────── */
+.synopsis-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.85) 60%, rgba(0,0,0,0.4) 100%);
+    display: flex;
+    align-items: flex-end;
+    padding: 1rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+.movie-card:hover .synopsis-overlay { opacity: 1; }
+.synopsis-content { width: 100%; }
+.synopsis-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 0.4rem;
+}
+.synopsis-text {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.88);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 5;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* ── BOOKMARK BUTTON ─────────────────────── */
+.bookmark-btn {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: var(--transition);
+    z-index: 10;
+    line-height: 1;
+}
+.bookmark-btn:hover {
+    background: rgba(245,166,35,0.2);
+    border-color: var(--accent);
+    transform: scale(1.15);
+}
+.bookmark-btn.saved {
+    background: rgba(245,166,35,0.25);
+    border-color: var(--accent);
+}
+
+/* ── WATCHLIST TOGGLE BTN ────────────────── */
+.watchlist-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 1rem;
+    border-radius: 50px;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    transition: var(--transition);
+}
+.watchlist-toggle-btn:hover { color: var(--accent); border-color: var(--border-hover); }
+.watchlist-toggle-btn.active { background: var(--accent-dim); color: var(--accent); border-color: var(--border-hover); }
+.wl-badge {
+    background: var(--accent);
+    color: #000;
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 0.05rem 0.4rem;
+    border-radius: 50px;
+    min-width: 18px;
+    text-align: center;
+}
+
+/* ── CURRENT POSTER BOX (edit page) ─────── */
+.current-poster-box {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.9rem 1rem;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 0.25rem;
+}

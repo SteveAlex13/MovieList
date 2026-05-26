@@ -11,6 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $genre    = trim($_POST['genre']    ?? '');
     $year     = trim($_POST['year']     ?? '');
     $rating   = trim($_POST['rating']   ?? '');
+    $synopsis = trim($_POST['synopsis'] ?? '');
     $posterType = $_POST['poster_type'] ?? 'url';
     $posterUrl  = trim($_POST['poster_url'] ?? '');
 
@@ -46,16 +47,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $poster = $posterUrl;
     }
 
-    $old = compact('title','director','genre','year','rating','posterUrl','posterType');
+    $old = compact('title','director','genre','year','rating','posterUrl','posterType','synopsis');
 
     if (empty($errors)) {
-        $stmt = $pdo->prepare("INSERT INTO movies (title, director, genre, year, rating, poster) VALUES (:title, :director, :genre, :year, :rating, :poster)");
+        $stmt = $pdo->prepare("INSERT INTO movies (title, director, genre, year, rating, synopsis, poster) VALUES (:title, :director, :genre, :year, :rating, :synopsis, :poster)");
         $stmt->execute([
             ':title'    => $title,
             ':director' => $director ?: null,
             ':genre'    => $genre    ?: null,
             ':year'     => $year     ?: null,
             ':rating'   => $rating   !== '' ? $rating : null,
+            ':synopsis' => $synopsis ?: null,
             ':poster'   => $poster   ?: null,
         ]);
         $_SESSION['success'] = "Film \"$title\" berhasil ditambahkan! 🎉";
@@ -143,6 +145,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <input type="number" name="rating" class="form-control" placeholder="Contoh: 8.5"
                             min="0" max="10" step="0.1"
                             value="<?= htmlspecialchars($old['rating'] ?? '') ?>">
+                    </div>
+
+                    <!-- Synopsis -->
+                    <div class="form-group full-width">
+                        <label class="form-label">Sinopsis</label>
+                        <textarea name="synopsis" class="form-control" rows="3" placeholder="Ceritakan singkat tentang film ini..."><?= htmlspecialchars($old['synopsis'] ?? '') ?></textarea>
                     </div>
 
                     <!-- Poster -->

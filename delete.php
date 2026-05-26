@@ -10,27 +10,42 @@ if (!$id) {
     exit;
 }
 
-// Fetch movie to get poster path & title
-$stmt = $pdo->prepare("SELECT title, poster FROM movies WHERE id = :id");
-$stmt->execute([':id' => $id]);
-$movie = $stmt->fetch();
+try {
+    // Fetch movie
+    $stmt = $pdo->prepare("SELECT id, title, poster FROM movies WHERE id = :id");
+    $stmt->execute([':id' => $id]);
+    $movie = $stmt->fetch();
 
-if (!$movie) {
-    $_SESSION['error'] = 'Film tidak ditemukan.';
-    header('Location: index.php');
-    exit;
+    if (!$movie) {
+        $_SESSION['error'] = 'Film tidak ditemukan atau sudah dihapus.';
+        header('Location: index.php');
+        exit;
+    }
+
+    // Remove watchlist entries first (in case FK not set)
+    try {
+        $pdo->prepare("DELETE FROM watchlist WHERE movie_id = :id")->execute([':id' => $id]);
+    } catch (Exception $e) { /* watchlist table might not exist yet */ }
+
+    // Delete the movie
+    $del = $pdo->prepare("DELETE FROM movies WHERE id = :id");
+    $del->execute([':id' => $id]);
+
+    // Delete local poster file
+    if (!empty($movie['poster'])
+        && !str_starts_with($movie['poster'], 'http')
+        && !str_starts_with($movie['poster'], '//')
+        && file_exists($movie['poster'])
+    ) {
+        @unlink($movie['poster']);
+    }
+
+    $_SESSION['success'] = "Film \"" . htmlspecialchars($movie['title']) . "\" berhasil dihapus.";
+
+} catch (PDOException $e) {
+    $_SESSION['error'] = 'Gagal menghapus film: ' . $e->getMessage();
 }
 
-// Delete uploaded poster file if local
-if (!empty($movie['poster']) && !str_starts_with($movie['poster'], 'http') && file_exists($movie['poster'])) {
-    @unlink($movie['poster']);
-}
-
-// Delete from DB
-$stmt = $pdo->prepare("DELETE FROM movies WHERE id = :id");
-$stmt->execute([':id' => $id]);
-
-$_SESSION['success'] = "Film \"" . $movie['title'] . "\" berhasil dihapus.";
 header('Location: index.php');
 exit;
 ?>
