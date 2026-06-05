@@ -937,6 +937,100 @@ body.app-body { overflow: hidden; }
 
 
 /* ============================================================
+   GENRE MULTI-SELECT DROPDOWN — sidebar
+   ============================================================ */
+
+.genre-multi-wrap { position: relative; }
+
+.genre-multi-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+}
+.genre-multi-btn:hover { border-color: var(--border-hover); background: var(--bg-card); }
+
+.genre-multi-arrow {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    transition: transform 0.2s;
+    flex-shrink: 0;
+}
+.genre-multi-panel.open ~ * .genre-multi-arrow,
+.genre-multi-btn[aria-expanded="true"] .genre-multi-arrow { transform: rotate(180deg); }
+
+.genre-multi-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.4rem 0;
+    z-index: 200;
+    max-height: 220px;
+    overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.genre-multi-panel.open { display: block; }
+
+.genre-multi-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    transition: background 0.15s;
+}
+.genre-multi-item:hover { background: var(--bg-card2); }
+.genre-multi-item input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px; flex-shrink: 0; }
+
+.genre-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.5rem;
+}
+
+.genre-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid var(--accent-glow);
+    border-radius: 20px;
+    padding: 0.2rem 0.5rem 0.2rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.genre-tag-x {
+    background: none;
+    border: none;
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 0.65rem;
+    padding: 0;
+    line-height: 1;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+}
+.genre-tag-x:hover { opacity: 1; }
+
+/* ============================================================
    ADMIN DASHBOARD — admin.php
    Full-height fixed sidebar + scrollable content area
    ============================================================ */
@@ -1406,6 +1500,33 @@ body.app-body { overflow: hidden; }
     align-items: center;
     gap: 0.5rem;
 }
+
+/* ── Avatar upload ── */
+.avatar-upload-row {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+.avatar-lg {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: var(--accent-dim);
+    border: 2px solid var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+.avatar-lg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.avatar-upload-info { flex: 1; min-width: 200px; }
 
 /* Two-column form row (collapses to single on small screens) */
 .form-row {

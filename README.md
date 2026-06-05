@@ -106,7 +106,13 @@ http://localhost/MovieList/
 MovieList/
 │
 ├── assets/
-│   └── style.css            # Semua CSS eksternal (satu file untuk semua halaman)
+│   ├── css/
+│   │   └── style.css            # Semua CSS eksternal (satu file untuk semua halaman)
+│   ├── js/
+│   │   └── admin-filter-genre.js # JS multi-select genre filter (admin sidebar)
+│   └── uploads/                 # File yang diupload pengguna
+│       ├── avatars/             # Foto profil user
+│       └── (poster film...)     # Poster film yang diupload admin
 │
 ├── config/
 │   └── db.php               # Konfigurasi koneksi database (PDO)
@@ -119,11 +125,10 @@ MovieList/
 │   ├── navbar.php           # Komponen navbar (hanya untuk halaman publik)
 │   └── footer.php           # Komponen footer
 │
-├── uploads/                 # Folder penyimpanan poster film yang diupload
-│
 ├── index.php                # Halaman utama — daftar semua film (publik)
 ├── admin.php                # Dashboard admin — kelola film (khusus admin)
-├── dashboard.php            # Dashboard user — profil & watchlist (khusus user login)
+├── dashboard.php            # Dashboard user — profil & foto profil (khusus user login)
+├── my_watchlist.php         # Halaman watchlist user — kartu film tersimpan (khusus user login)
 ├── login.php                # Halaman login
 ├── register.php             # Halaman registrasi akun baru
 ├── logout.php               # Proses logout (hancurkan sesi)
@@ -134,7 +139,7 @@ MovieList/
 ├── bulk_delete.php          # Proses hapus banyak film sekaligus (khusus admin)
 ├── watchlist.php            # API endpoint toggle/list watchlist (JSON, butuh login)
 │
-└── notes.md                 # File dokumentasi ini
+└── README.md                # Dokumentasi project
 ```
 
 ---
@@ -154,6 +159,7 @@ Menyimpan data akun pengguna.
 | `email`      | VARCHAR(100), UNIQUE    | Email (bisa dipakai untuk login) |
 | `password`   | VARCHAR(255)            | Password ter-hash (bcrypt)       |
 | `role`       | ENUM('admin','user')    | Peran pengguna                   |
+| `avatar`     | VARCHAR(255), NULL      | Path foto profil (opsional)      |
 | `created_at` | TIMESTAMP               | Waktu akun dibuat                |
 
 ### Tabel `movies`
@@ -220,6 +226,7 @@ $_SESSION['user_role']  // 'admin' atau 'user'
 | `delete.php`      | `require_admin()`    | Admin saja             |
 | `bulk_delete.php` | `require_admin()`    | Admin saja             |
 | `dashboard.php`   | `require_login()`    | Semua user yang login  |
+| `my_watchlist.php`| `require_login()`    | Semua user yang login  |
 | `watchlist.php`   | cek `is_logged_in()` | Semua user yang login  |
 | `index.php`       | Tidak ada            | Publik (semua orang)   |
 | `login.php`       | Tidak ada            | Publik (semua orang)   |
@@ -295,7 +302,7 @@ Hanya bisa diakses oleh admin. Tidak ada navbar — layout sidebar penuh.
 - Paginasi — 10 film per halaman
 - Hapus satu film dengan modal konfirmasi
 - Bulk delete — centang banyak film lalu hapus sekaligus
-- Sidebar berisi navigasi, filter genre, dan tombol logout
+- Sidebar berisi navigasi, filter genre multi-select (dropdown dengan chips yang bisa dihapus satu per satu), dan tombol logout
 
 ---
 
@@ -306,16 +313,28 @@ Hanya bisa diakses oleh user yang sudah login. Tidak ada navbar — layout sideb
 **Fitur Sidebar:**
 
 - Logo CineList (link ke halaman utama)
-- Info user: avatar, username, email
-- Navigasi: Halaman Utama, Pengaturan Profil
-- Daftar watchlist — tampilkan poster mini + judul + tahun/rating
-- Tombol ✕ untuk hapus film dari watchlist tanpa reload halaman
+- Foto profil user (avatar), username, email
+- Navigasi: Halaman Utama, Watchlist (dengan badge jumlah film), Pengaturan Profil
 - Tombol Logout di bagian bawah
 
 **Fitur Konten Utama:**
 
+- Ubah Foto Profil: upload gambar (JPG/PNG/WebP/GIF, maks 2MB), preview langsung sebelum simpan
 - Ubah Profil: ganti username dan email
 - Ubah Password: isi password lama → password baru → konfirmasi
+
+---
+
+### `my_watchlist.php` — Halaman Watchlist User
+
+Hanya bisa diakses oleh user yang sudah login. Sidebar identik dengan `dashboard.php`.
+
+**Fitur:**
+
+- Grid kartu film dari watchlist user — poster, rating, genre, judul, sutradara, tahun
+- Sinopsis muncul saat hover poster
+- Tombol ❤️ dan "Hapus dari Watchlist" — hapus film dari watchlist tanpa reload (AJAX)
+- Tampilan empty state jika watchlist kosong
 
 ---
 

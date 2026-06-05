@@ -10,9 +10,10 @@ $page    = max(1, intval($_GET['page'] ?? 1));
 $offset  = ($page - 1) * $perPage;
 
 // Search/filter
-$search = trim($_GET['search'] ?? '');
-$genre  = trim($_GET['genre']  ?? '');
-$sort   = $_GET['sort'] ?? 'created_at_desc';
+$search        = trim($_GET['search'] ?? '');
+$genre         = trim($_GET['genre']  ?? ''); // toolbar single-select
+$genres_filter = array_values(array_filter(array_map('trim', (array)($_GET['genres'] ?? []))));
+$sort          = $_GET['sort'] ?? 'created_at_desc';
 
 $where  = [];
 $params = [];
@@ -21,7 +22,11 @@ if ($search !== '') {
     $params[':search']  = "%$search%";
     $params[':search2'] = "%$search%";
 }
-if ($genre !== '') {
+if (!empty($genres_filter)) {
+    $phs = implode(',', array_map(fn($i) => ":gf$i", array_keys($genres_filter)));
+    $where[] = "genre IN ($phs)";
+    foreach ($genres_filter as $i => $g) $params[":gf$i"] = $g;
+} elseif ($genre !== '') {
     $where[] = 'genre = :genre';
     $params[':genre'] = $genre;
 }
@@ -70,13 +75,15 @@ if (isset($_SESSION['error']))   { $error   = $_SESSION['error'];   unset($_SESS
 
 // Build query string helper
 function qs($extra = []) {
+    global $genres_filter;
     $base = array_filter([
         'search' => $_GET['search'] ?? '',
         'genre'  => $_GET['genre']  ?? '',
         'sort'   => $_GET['sort']   ?? '',
     ]);
+    if (!empty($genres_filter)) $base['genres'] = $genres_filter;
     $merged = array_merge($base, $extra);
-    $merged = array_filter($merged, fn($v) => $v !== '' && $v !== null);
+    $merged = array_filter($merged, fn($v) => $v !== '' && $v !== null && $v !== []);
     return $merged ? '?' . http_build_query($merged) : '?';
 }
 ?>
@@ -86,7 +93,7 @@ function qs($extra = []) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard — CineList</title>
-    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/css/style.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
 </head>
 <body class="app-body">
@@ -117,14 +124,30 @@ function qs($extra = []) {
         </div>
         <div class="sidebar-section">
             <div class="sidebar-label">Filter Genre</div>
-            <a href="<?= qs(['genre'=>'','page'=>1]) ?>" class="sidebar-link <?= $genre==='' ? 'active':'' ?>">
-                <span class="icon">🌐</span> Semua
+            <div class="genre-multi-wrap" id="genreMultiWrap">
+                <button type="button" class="genre-multi-btn" id="genreMultiBtn" onclick="toggleGenreDropdown(event)">
+                    <span id="genreMultiLabel"><?= !empty($genres_filter) ? count($genres_filter).' genre dipilih' : 'Semua Genre' ?></span>
+                    <span class="genre-multi-arrow">▾</span>
+                </button>
+                <div class="genre-multi-panel" id="genreMultiPanel">
+                    <?php foreach ($genres as $g): ?>
+                    <label class="genre-multi-item">
+                        <input type="checkbox" class="genre-cb" value="<?= htmlspecialchars($g, ENT_QUOTES) ?>" <?= in_array($g, $genres_filter) ? 'checked' : '' ?> onchange="applyGenreFilter()">
+                        <span><?= htmlspecialchars($g) ?></span>
+                    </label>
+                    <?php endforeach; ?>
+                </div>
+                <div class="genre-tags" id="genreTags">
+                    <?php foreach ($genres_filter as $g): ?>
+                    <span class="genre-tag"><?= htmlspecialchars($g) ?><button class="genre-tag-x" onclick="removeGenreTag(<?= json_encode($g) ?>)" type="button">✕</button></span>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php if (!empty($genres_filter)): ?>
+            <a href="<?= qs(['genres'=>[],'genre'=>'','page'=>1]) ?>" class="sidebar-link" style="font-size:0.78rem;color:var(--text-secondary);margin-top:0.25rem;">
+                <span class="icon">✕</span> Hapus filter genre
             </a>
-            <?php foreach ($genres as $g): ?>
-            <a href="<?= qs(['genre'=>$g,'page'=>1]) ?>" class="sidebar-link <?= $genre===$g?'active':'' ?>">
-                <span class="icon">🎭</span> <?= htmlspecialchars($g) ?>
-            </a>
-            <?php endforeach; ?>
+            <?php endif; ?>
         </div>
         </nav>
         <div style="padding:1rem;border-top:1px solid var(--border);margin-top:auto;">
@@ -204,7 +227,7 @@ function qs($extra = []) {
                 <option value="year_asc"        <?= $sort==='year_asc'       ?'selected':'' ?>>Tahun ↑</option>
             </select>
             <button type="submit" class="btn-search">🔍 Cari</button>
-            <?php if ($search || $genre || $sort !== 'created_at_desc'): ?>
+            <?php if ($search || $genre || !empty($genres_filter) || $sort !== 'created_at_desc'): ?>
                 <a href="admin.php" class="btn-reset">✕ Reset</a>
             <?php endif; ?>
         </form>
@@ -389,5 +412,10 @@ setTimeout(() => {
     });
 }, 4000);
 </script>
+<script>
+const ADMIN_SEARCH = <?= json_encode($search) ?>;
+const ADMIN_SORT   = <?= json_encode($sort) ?>;
+</script>
+<script src="assets/js/admin-filter-genre.js"></script>
 </body>
 </html>

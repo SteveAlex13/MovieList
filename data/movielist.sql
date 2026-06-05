@@ -35,11 +35,14 @@ CREATE TABLE `users` (
   `email`      varchar(100) NOT NULL,
   `password`   varchar(255) NOT NULL,
   `role`       enum('admin','user') NOT NULL DEFAULT 'user',
+  `avatar`     varchar(255) DEFAULT NULL,
   `created_at` timestamp    NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`),
   UNIQUE KEY `email`    (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- For existing installations, run: ALTER TABLE `users` ADD COLUMN `avatar` varchar(255) DEFAULT NULL AFTER `role`;
 
 -- Seed accounts
 -- admin123 → $2y$10$CwFyGAJJkN4xdOLcqXIuMeQ/Mahl7/vL7BJ9ptyQpIJPZ1Jg.qQIC

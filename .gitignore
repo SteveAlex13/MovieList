@@ -1,0 +1,8 @@
+CLAUDE.md
+
+# Uploaded user files — keep folder structure only
+assets/uploads/*
+!assets/uploads/avatars
+!assets/uploads/.gitkeep
+assets/uploads/avatars/*
+!assets/uploads/avatars/.gitkeep

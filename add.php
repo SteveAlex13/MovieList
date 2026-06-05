@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($file['size'] > $maxSize) {
             $errors[] = 'Ukuran file terlalu besar. Maksimal 5MB.';
         } else {
-            $uploadDir = 'uploads/';
+            $uploadDir = 'assets/uploads/';
             if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
             $ext      = pathinfo($file['name'], PATHINFO_EXTENSION);
             $filename = uniqid('poster_', true) . '.' . $ext;
@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tambah Film — CineList</title>
-    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/css/style.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
 </head>
 <body>

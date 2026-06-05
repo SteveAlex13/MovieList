@@ -12,7 +12,7 @@ if (isset($_SESSION['success'])) { $success = $_SESSION['success']; unset($_SESS
 if (isset($_SESSION['error']))   { $error   = $_SESSION['error'];   unset($_SESSION['error']); }
 
 // Fetch current user data
-$user = $pdo->prepare("SELECT id, username, email FROM users WHERE id = :id");
+$user = $pdo->prepare("SELECT id, username, email, avatar FROM users WHERE id = :id");
 $user->execute([':id' => $uid]);
 $user = $user->fetch();
 
@@ -20,7 +20,38 @@ $user = $user->fetch();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
-    if ($action === 'update_profile') {
+    if ($action === 'update_avatar') {
+        $file = $_FILES['avatar'] ?? null;
+        if ($file && $file['error'] === UPLOAD_ERR_OK) {
+            $allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+            $maxSize = 2 * 1024 * 1024;
+            if (!in_array($file['type'], $allowed)) {
+                $_SESSION['error'] = 'Format tidak didukung. Gunakan JPG, PNG, WebP, atau GIF.';
+            } elseif ($file['size'] > $maxSize) {
+                $_SESSION['error'] = 'Ukuran file terlalu besar. Maksimal 2MB.';
+            } else {
+                $uploadDir = 'assets/uploads/avatars/';
+                if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+                $ext      = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                $filename = 'avatar_' . $uid . '_' . uniqid() . '.' . $ext;
+                $dest     = $uploadDir . $filename;
+                if (move_uploaded_file($file['tmp_name'], $dest)) {
+                    $old = $user['avatar'];
+                    if ($old && !str_starts_with($old, 'http') && file_exists($old)) @unlink($old);
+                    $pdo->prepare("UPDATE users SET avatar = :a WHERE id = :id")
+                        ->execute([':a' => $dest, ':id' => $uid]);
+                    $_SESSION['success'] = 'Foto profil berhasil diperbarui.';
+                } else {
+                    $_SESSION['error'] = 'Gagal mengupload foto.';
+                }
+            }
+        } elseif ($file && $file['error'] !== UPLOAD_ERR_NO_FILE) {
+            $_SESSION['error'] = 'Terjadi kesalahan saat upload.';
+        }
+        header('Location: dashboard.php');
+        exit;
+
+    } elseif ($action === 'update_profile') {
         $newUsername = trim($_POST['username'] ?? '');
         $newEmail    = trim($_POST['email']    ?? '');
         $errors      = [];
@@ -90,16 +121,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Fetch watchlist with movie details
-$wlStmt = $pdo->prepare("
-    SELECT m.id, m.title, m.genre, m.year, m.rating, m.poster
-    FROM watchlist w
-    JOIN movies m ON m.id = w.movie_id
-    WHERE w.user_id = :uid
-    ORDER BY w.added_at DESC
-");
+// Watchlist count for sidebar badge
+$wlStmt = $pdo->prepare("SELECT COUNT(*) FROM watchlist WHERE user_id = :uid");
 $wlStmt->execute([':uid' => $uid]);
-$watchlistMovies = $wlStmt->fetchAll();
+$wlCount = (int) $wlStmt->fetchColumn();
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -107,7 +132,7 @@ $watchlistMovies = $wlStmt->fetchAll();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard — CineList</title>
-    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/css/style.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
 </head>
 <body class="app-body">
@@ -121,7 +146,13 @@ $watchlistMovies = $wlStmt->fetchAll();
         </a>
 
         <div class="sidebar-user-box">
-            <div class="sidebar-avatar">👤</div>
+            <div class="sidebar-avatar">
+                <?php if (!empty($user['avatar'])): ?>
+                    <img src="<?= htmlspecialchars($user['avatar']) ?>" alt="Avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                <?php else: ?>
+                    👤
+                <?php endif; ?>
+            </div>
             <div class="sidebar-username"><?= htmlspecialchars($user['username']) ?></div>
             <div class="sidebar-email"><?= htmlspecialchars($user['email']) ?></div>
         </div>
@@ -130,47 +161,18 @@ $watchlistMovies = $wlStmt->fetchAll();
             <a href="index.php" class="sidebar-link">
                 <span class="icon">🏠</span> Halaman Utama
             </a>
+            <a href="my_watchlist.php" class="sidebar-link">
+                <span class="icon">❤️</span> Watchlist
+                <?php if ($wlCount > 0): ?>
+                <span class="wl-badge" style="margin-left:auto;"><?= $wlCount ?></span>
+                <?php endif; ?>
+            </a>
             <a href="dashboard.php" class="sidebar-link active">
                 <span class="icon">⚙️</span> Pengaturan Profil
             </a>
         </nav>
 
-        <!-- Watchlist in sidebar -->
-        <div class="sidebar-watchlist">
-            <div class="sidebar-wl-label">
-                Watchlist Saya
-                <span class="wl-count"><?= count($watchlistMovies) ?></span>
-            </div>
-            <?php if (empty($watchlistMovies)): ?>
-                <div class="wl-empty">
-                    🤍 Belum ada film di watchlist.<br>
-                    <a href="index.php" style="color:var(--accent);font-size:0.75rem;">Tambah sekarang</a>
-                </div>
-            <?php else: ?>
-                <?php foreach ($watchlistMovies as $m): ?>
-                <div class="wl-item">
-                    <div class="wl-poster">
-                        <?php if (!empty($m['poster'])): ?>
-                            <img src="<?= htmlspecialchars($m['poster']) ?>" alt="" loading="lazy"
-                                onerror="this.style.display='none';this.parentElement.textContent='🎬'">
-                        <?php else: ?>
-                            🎬
-                        <?php endif; ?>
-                    </div>
-                    <div class="wl-info">
-                        <div class="wl-title" title="<?= htmlspecialchars($m['title']) ?>"><?= htmlspecialchars($m['title']) ?></div>
-                        <div class="wl-meta">
-                            <?= $m['year'] ?? '' ?>
-                            <?php if ($m['rating']): ?> · ⭐ <?= number_format($m['rating'], 1) ?><?php endif; ?>
-                        </div>
-                    </div>
-                    <button class="wl-remove" onclick="removeFromWatchlist(<?= $m['id'] ?>, this)" title="Hapus dari watchlist">✕</button>
-                </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
-        </div>
-
-        <div class="sidebar-bottom">
+        <div class="sidebar-bottom" style="margin-top:auto;">
             <a href="logout.php" class="sidebar-link" style="color:var(--red,#ff4757);">
                 <span class="icon">🚪</span> Logout
             </a>
@@ -186,6 +188,29 @@ $watchlistMovies = $wlStmt->fetchAll();
 
         <?php if ($success): ?><div class="alert alert-success">✅ <?= htmlspecialchars($success) ?></div><?php endif; ?>
         <?php if ($error):   ?><div class="alert alert-error">❌ <?= $error ?></div><?php endif; ?>
+
+        <!-- Avatar -->
+        <div class="dash-section">
+            <h2>🖼️ Foto Profil</h2>
+            <form method="POST" action="dashboard.php" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="update_avatar">
+                <div class="avatar-upload-row">
+                    <div class="avatar-lg" id="avatarPreview">
+                        <?php if (!empty($user['avatar'])): ?>
+                            <img src="<?= htmlspecialchars($user['avatar']) ?>" alt="Avatar" id="avatarImg">
+                        <?php else: ?>
+                            <span id="avatarPlaceholder">👤</span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="avatar-upload-info">
+                        <label class="form-label" style="margin-bottom:0.5rem;display:block;">Pilih foto baru</label>
+                        <input type="file" name="avatar" id="avatarInput" accept="image/jpeg,image/png,image/webp,image/gif" onchange="previewAvatar(this)" class="form-control" style="padding:0.5rem;cursor:pointer;">
+                        <p style="font-size:0.78rem;color:var(--text-secondary);margin-top:0.4rem;">JPG, PNG, WebP, GIF · Maks 2MB</p>
+                        <button type="submit" class="btn-submit" style="margin-top:0.75rem;">💾 Simpan Foto</button>
+                    </div>
+                </div>
+            </form>
+        </div>
 
         <!-- Profile Info -->
         <div class="dash-section">
@@ -275,35 +300,14 @@ $watchlistMovies = $wlStmt->fetchAll();
 </div>
 
 <script>
-function removeFromWatchlist(movieId, btn) {
-    fetch('watchlist.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: `action=toggle&movie_id=${movieId}`
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.ok && !data.saved) {
-            const item = btn.closest('.wl-item');
-            item.style.transition = 'opacity 0.3s';
-            item.style.opacity = '0';
-            setTimeout(() => {
-                item.remove();
-                // Update count badge
-                const remaining = document.querySelectorAll('.wl-item').length;
-                const badge = document.querySelector('.wl-count');
-                if (badge) badge.textContent = remaining;
-                if (remaining === 0) {
-                    document.querySelector('.sidebar-watchlist').innerHTML = `
-                        <div class="sidebar-wl-label">Watchlist Saya <span class="wl-count">0</span></div>
-                        <div class="wl-empty">🤍 Belum ada film di watchlist.<br>
-                        <a href="index.php" style="color:var(--accent);font-size:0.75rem;">Tambah sekarang</a></div>
-                    `;
-                }
-            }, 300);
-        }
-    })
-    .catch(console.error);
+function previewAvatar(input) {
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        document.getElementById('avatarPreview').innerHTML =
+            `<img src="${e.target.result}" alt="Preview" id="avatarImg">`;
+    };
+    reader.readAsDataURL(input.files[0]);
 }
 
 setTimeout(() => {
