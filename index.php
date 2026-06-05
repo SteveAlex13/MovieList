@@ -1,6 +1,7 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
 require_once 'config/db.php';
+require_once 'includes/auth.php';
 
 $search = trim($_GET['search'] ?? '');
 $genre  = trim($_GET['genre']  ?? '');
@@ -30,21 +31,20 @@ $orderMap = [
 ];
 $orderSQL = $orderMap[$sort] ?? 'created_at DESC';
 
-// Watchlist filter
-$sid = session_id();
+// Watchlist filter — requires login
 $watchlistIds = [];
-try {
-    $pdo->exec("CREATE TABLE IF NOT EXISTS watchlist (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        movie_id INT NOT NULL,
-        session_id VARCHAR(128) NOT NULL,
-        added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE KEY unique_watchlist (movie_id, session_id)
-    )");
-    $wRows = $pdo->prepare("SELECT movie_id FROM watchlist WHERE session_id = :s");
-    $wRows->execute([':s' => $sid]);
-    $watchlistIds = $wRows->fetchAll(PDO::FETCH_COLUMN);
-} catch (PDOException $e) {}
+if (is_logged_in()) {
+    try {
+        $wRows = $pdo->prepare("SELECT movie_id FROM watchlist WHERE user_id = :u");
+        $wRows->execute([':u' => (int) $_SESSION['user_id']]);
+        $watchlistIds = $wRows->fetchAll(PDO::FETCH_COLUMN);
+    } catch (PDOException $e) {}
+} elseif ($watchlistOnly) {
+    // Not logged in but trying to view watchlist → redirect to login
+    $_SESSION['error'] = 'Login dulu untuk melihat watchlist kamu.';
+    header('Location: login.php');
+    exit;
+}
 
 if ($watchlistOnly && !empty($watchlistIds)) {
     $placeholders = implode(',', array_fill(0, count($watchlistIds), '?'));
@@ -164,11 +164,15 @@ if (isset($_SESSION['error']))   { $error   = $_SESSION['error'];   unset($_SESS
                         <?php endif; ?>
 
                         <!-- Bookmark button -->
+                        <?php if (is_logged_in()): ?>
                         <button class="bookmark-btn <?= $inWatchlist ? 'saved' : '' ?>"
                             onclick="toggleWatchlist(<?= $movie['id'] ?>, this)"
                             title="<?= $inWatchlist ? 'Hapus dari watchlist' : 'Tambah ke watchlist' ?>">
                             <?= $inWatchlist ? '❤️' : '🤍' ?>
                         </button>
+                        <?php else: ?>
+                        <a href="login.php" class="bookmark-btn" title="Login untuk menambah ke watchlist">🤍</a>
+                        <?php endif; ?>
 
                         <!-- Synopsis hover overlay -->
                         <?php if (!empty($movie['synopsis'])): ?>
@@ -190,10 +194,12 @@ if (isset($_SESSION['error']))   { $error   = $_SESSION['error'];   unset($_SESS
                             <?php if (!empty($movie['director'])): ?><span>🎬 <?= htmlspecialchars($movie['director']) ?></span><?php endif; ?>
                             <?php if (!empty($movie['year'])): ?><span>📅 <?= $movie['year'] ?></span><?php endif; ?>
                         </div>
+                        <?php if (is_admin()): ?>
                         <div class="card-actions">
                             <a href="edit.php?id=<?= $movie['id'] ?>" class="btn-edit">✏️ Edit</a>
                             <button class="btn-delete" onclick="confirmDelete(<?= $movie['id'] ?>, '<?= addslashes(htmlspecialchars($movie['title'])) ?>')">🗑️ Hapus</button>
                         </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             <?php endforeach; ?>
@@ -235,11 +241,14 @@ function toggleWatchlist(movieId, btn) {
     })
     .then(r => r.json())
     .then(data => {
+        if (data.error === 'not_logged_in') {
+            window.location.href = 'login.php';
+            return;
+        }
         if (data.ok) {
             btn.textContent = data.saved ? '❤️' : '🤍';
             btn.classList.toggle('saved', data.saved);
             btn.title = data.saved ? 'Hapus dari watchlist' : 'Tambah ke watchlist';
-            // update badge
             updateWatchlistBadge();
         }
     })
